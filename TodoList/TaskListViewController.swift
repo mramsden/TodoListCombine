@@ -12,7 +12,7 @@ import UIKit
 class TaskListViewController: UITableViewController {
 
     var viewModel: TaskListViewModel?
-    private let taskListDataSource = TaskListTableViewDataSource()
+    private var diffableTasksDataSource: TaskListDiffableDataSource?
     private var fetchTasksSubscription: AnyCancellable?
 
     init() {
@@ -32,12 +32,16 @@ class TaskListViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        tableView.dataSource = taskListDataSource
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
 
-        fetchTasksSubscription = viewModel?.fetchTasks().sink { [weak self] tasks in
-            self?.taskListDataSource.tasks = tasks
-            self?.tableView.reloadData()
+        diffableTasksDataSource = TaskListDiffableDataSource(tableView: tableView) { tableView, indexPath, task in
+            let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+            cell.textLabel?.text = task.summary
+            return cell
+        }
+        
+        fetchTasksSubscription = viewModel?.fetchTasks.sink { [weak self] tasks in
+            self?.diffableTasksDataSource?.apply(items: tasks)
         }
     }
 
@@ -46,19 +50,29 @@ class TaskListViewController: UITableViewController {
     }
 }
 
-class TaskListTableViewDataSource: NSObject, UITableViewDataSource {
+class TaskListDiffableDataSource: NSObject, UITableViewDataSource {
 
-    var tasks = [Task]()
-
+    private let tableView: UITableView
+    private let cellProvider: (UITableView, IndexPath, Task) -> UITableViewCell
+    private var items = [Task]()
+    
+    init(tableView: UITableView, cellProvider: @escaping (UITableView, IndexPath, Task) -> UITableViewCell) {
+        self.tableView = tableView
+        self.cellProvider = cellProvider
+        super.init()
+        tableView.dataSource = self
+    }
+    
+    func apply(items: [Task]) {
+        self.items = items
+        tableView.reloadData()
+    }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tasks.count
+        return items.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        if tasks.indices.contains(indexPath.row) {
-            cell.textLabel?.text = tasks[indexPath.row].summary
-        }
-        return cell
+        return cellProvider(tableView, indexPath, items[indexPath.row])
     }
 }

@@ -10,7 +10,7 @@ import Foundation
 
 class TaskList {
 
-    private(set) var tasks = [Task]()
+    @Published private(set) var tasks = [Task]()
 
     func add(task: Task) {
         tasks.append(task)

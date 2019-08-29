@@ -6,7 +6,7 @@
 //  Copyright © 2019 Marcus Ramsden. All rights reserved.
 //
 
-import Combine
+import struct Combine.Published
 import Foundation
 
 class TaskListViewModel {
@@ -14,11 +14,11 @@ class TaskListViewModel {
     private let taskList: TaskList
 
     init(taskList: TaskList) {
-        self.taskList = TaskList()
+        self.taskList = taskList
     }
 
-    func fetchTasks() -> Just<[Task]> {
-        Just(taskList.tasks)
+    var fetchTasks: Published<[Task]>.Publisher {
+        taskList.$tasks
     }
 
     func addTask() {
